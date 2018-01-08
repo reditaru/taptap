@@ -7,6 +7,7 @@ function Background(){
     var forward;
     var back;
     var mask;
+    var flag;
     _this.init = function(){
         _this.forwardColor = _this.backColor = colorSet[Math.floor(Math.random()*colorSet.length)];
         while(_this.forwardColor===_this.backColor){
@@ -27,6 +28,7 @@ function Background(){
         _this.container = new PIXI.Container();
         _this.container.addChild(_this.back);
         _this.container.addChild(_this.forward);
+        _this.flag = true;
     }
     _this.getContainer = function(){
         return _this.container;
@@ -42,38 +44,53 @@ function Background(){
         _this.mask.endFill();
     }
     _this.slide = function (){
-        console.log('start')
         var tl = new TimelineMax({
             pause:true,
-            onComplete:function(){ _this.forwardColor = _this.backColor; _this.drawRect(_this.forward,_this.forwardColor);},
+            onComplete:function(){ _this.forwardColor = _this.backColor; },
             onUpdate:background.updateMask
         });
-        while(_this.forwardColor===_this.backColor){
-            _this.backColor = colorSet[Math.floor(Math.random()*colorSet.length)];
+        if(_this.flag){
+            while(_this.forwardColor===_this.backColor){
+                _this.backColor = colorSet[Math.floor(Math.random()*colorSet.length)];
+            }
+            _this.drawRect(_this.back,_this.backColor);
+        }else{
+            while(_this.forwardColor===_this.backColor){
+                _this.forwardColor = colorSet[Math.floor(Math.random()*colorSet.length)];
+            }
+            _this.drawRect(_this.forward,_this.forwardColor);
         }
-        _this.drawRect(_this.back,_this.backColor);
         var direction = Math.floor(Math.random()*4),
             points = _this.generatePoints(direction),
             num = 0,
-            target = direction % 2 === 0? {y:direction ===0? window.innerHeight:0,ease:Power2.easeOut}:
-            {x:direction===1? 0:window.innerWidth,ease:Power2.easeOut};
+            target = direction % 2 === 0? {y:direction ===0? window.innerHeight:0,ease:Power3.easeOut}:
+            {x:direction===1? 0:window.innerWidth,ease:Power3.easeOut},
+            preNum = (direction + 3) % 4 ===0? 4:(direction+3)%4;
             _this.mask.points.length = 0;
-        while(num<direction+1){
-            _this.mask.points.push({y:num>1? window.innerHeight:0,x:num % 3 ===0? 0:window.innerWidth});
+        while(num<4+points.length){
+            if(_this.flag){
+                if(num<direction+1)
+                    _this.mask.points.push({y:num>1? window.innerHeight:0,x:num % 3 ===0? 0:window.innerWidth});
+                else if (num>=direction+1&&num<direction+1+points.length)
+                    _this.mask.points.push(points[num-direction-1]);
+                else
+                    _this.mask.points.push({y:(num-points.length)>1? window.innerHeight:0,x:(num-points.length) % 3 ===0? 0:window.innerWidth});
+            }else{
+                if(num<preNum)
+                    _this.addMaskPoint(_this.mask,direction,num);
+                else if (num>=preNum&&num<preNum+points.length)
+                    _this.mask.points.push(points[num-preNum]);
+                else
+                    _this.addMaskPoint(_this.mask,direction,num-points.length);
+            }
             num++;
         }
-        for(var point of points){
-            _this.mask.points.push(point);
-        }
-        while(num<4){
-            _this.mask.points.push({y:num>1? window.innerHeight:0,x:num % 3 ===0? 0:window.innerWidth});
-            num++;
-        }
-        tl.add(TweenMax.to(_this.mask.points[direction],Math.random() + 1, target),0)
+        tl.add(TweenMax.to(_this.mask.points[_this.flag? direction:preNum-1],Math.random() + 1, target),0)
+        tl.add(TweenMax.to(_this.mask.points[(_this.flag? (direction+points.length+1):(preNum+points.length))% _this.mask.points.length],Math.random() + 1, target),0) 
         for(var point of points){
             tl.add(TweenMax.to(point, Math.random() + 1, target),0);
         }
-        tl.add(TweenMax.to(_this.mask.points[(direction+points.length+1) % _this.mask.points.length],Math.random() + 1, target),0)
+        _this.flag = !_this.flag;
     }
     _this.generatePoints = function(direction,num){
         var minY = direction === 2? window.innerHeight:0,
@@ -94,6 +111,13 @@ function Background(){
         elem.beginFill(color);
         elem.drawRect(0,0,window.innerWidth,window.innerHeight);
         elem.endFill();
+    }
+    _this.addMaskPoint = function(mask,direction,index){
+        var arr = [[0,0,window.innerWidth,0,window.innerWidth,0,0,0],
+        [window.innerWidth,0,window.innerWidth,0,window.innerWidth,window.innerHeight,window.innerWidth,window.innerHeight],
+        [0,window.innerHeight,window.innerWidth,window.innerHeight,window.innerWidth,window.innerHeight,0,window.innerHeight],
+        [0,0,0,0,0,window.innerHeight,0,window.innerHeight]];
+        mask.points.push({x:arr[direction][index*2],y:arr[direction][index*2+1]});
     }
     _this.init();
     return _this;
