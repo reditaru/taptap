@@ -85,10 +85,13 @@ function Background(){
             }
             num++;
         }
-        tl.add(TweenMax.to(_this.mask.points[_this.flag? direction:preNum-1],Math.random() + 1, target),0)
-        tl.add(TweenMax.to(_this.mask.points[(_this.flag? (direction+points.length+1):(preNum+points.length))% _this.mask.points.length],Math.random() + 1, target),0) 
+        var delay = 0;
+        tl.add(TweenMax.to(_this.mask.points[_this.flag? direction:preNum-1],1-delay, target),0)
+        delay+= 0.15;
+        tl.add(TweenMax.to(_this.mask.points[(_this.flag? (direction+points.length+1):(preNum+points.length))% _this.mask.points.length],1-delay, target),0) 
         for(var point of points){
-            tl.add(TweenMax.to(point, Math.random() + 1, target),0);
+            delay+= 0.15;
+            tl.add(TweenMax.to(point, 1-delay, target),0);
         }
         _this.flag = !_this.flag;
     }
@@ -104,7 +107,7 @@ function Background(){
                     y = random(minY,maxY);
                 points.push({x:x,y:y});    
             }
-            return points;
+            return points.sort(function(a,b){return a.x==b.x? a.y-b.y:a.x-b.x});
     }
     _this.drawRect = function(elem,color){
         elem.clear();
