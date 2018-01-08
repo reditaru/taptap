@@ -5,7 +5,9 @@ app.renderer.resize(window.innerWidth, window.innerHeight);
 window.onresize = function (event){
     app.view.style.width = window.innerWidth + "px";
     app.view.style.height = window.innerHeight + "px";
+    app.renderer.resize(window.innerWidth,window.innerHeight);
 }
 var background = new Background();
+var block = new Block();
 app.stage.addChild(background.getContainer());
-setInterval(background.slide,4000);
+app.stage.addChild(block.getContainer());
