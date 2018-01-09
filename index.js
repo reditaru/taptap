@@ -11,3 +11,7 @@ var background = new Background();
 var block = new Block();
 app.stage.addChild(background.getContainer());
 app.stage.addChild(block.getContainer());
+var animes = [new RandomShape(),new ExplodeCircle(),new ExplodeRectangle(),new FillCircle()];
+for(var anime of animes){
+    app.stage.addChild(anime.getContainer());
+}
