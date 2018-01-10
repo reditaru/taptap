@@ -226,46 +226,49 @@ function Block(){
     }
     _this.init();
 }
-function RandomShape(){
+function RandomShape(line){
     var _this = this,
         container,
-        shape,
         pane,
-        color;
+        flag;
     _this.init = function(){
         _this.container = new PIXI.Container();
-        _this.shape = new PIXI.Graphics();
-        _this.shape.beginFill(0,0);
-        _this.shape.points = [];
         _this.pane = new PIXI.Graphics();
         _this.pane.beginFill(0,0);
         _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
         _this.container.addChild(_this.pane);
-        _this.container.addChild(_this.shape);
+        _this.flag = line || false;
     }
-    _this.update = function(){
-        _this.shape.clear();
-        var points = _this.shape.points;
-        _this.shape.beginFill(_this.color);
-        _this.shape.alpha = 1;
-        _this.shape.moveTo(points[0].x,points[0].y);
+    _this.update = function(shape,color,lineWidth){
+        shape.clear();
+        var points = shape.points;
+        if(!_this.flag){
+            shape.beginFill(color);
+        }else
+            shape.lineStyle(lineWidth,color);
+        shape.moveTo(points[0].x,points[0].y);
         for(var i=1;i<points.length;i++){
-            _this.shape.lineTo(points[i].x,points[i].y);
+            shape.lineTo(points[i].x,points[i].y);
         }
+        shape.closePath();
     }
     _this.play = function(){
-        var tl = new TimelineMax({
-            onComplete:function(){tl.set(_this.shape,{alpha:0})},
-            onUpdate:_this.update
-        });
-        var num = Math.floor(Math.random()*5 +3),
-            points = _this.generatePoints(num);
-        _this.shape.points.length = 0;
-        _this.color = colorSet[Math.floor(Math.random()*colorSet.length)];
-        _this.shape.points = points;
+        var num = Math.floor(Math.random()*3 +3),
+            points = _this.generatePoints(num),
+            shape = new PIXI.Graphics(),
+            color = colorSet[Math.floor(Math.random()*colorSet.length)],
+            lineWidth = random(2,4);
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(shape)},
+                onUpdate:_this.update,
+                onUpdateParams:[shape,color,lineWidth]
+            });
+            shape.points = points;
+            _this.update(shape,color,lineWidth);
+            _this.pane.addChild(shape);
         var newPoints = _this.generatePoints(num);
         for(var i=0;i<num;i++){
-            tl.add(TweenMax.to(_this.shape.points[i],1,{x:newPoints[i].x,y:newPoints[i].y,ease:Power3.easeOut}),0);
+            tl.add(TweenMax.to(shape.points[i],1,{x:newPoints[i].x,y:newPoints[i].y,ease:Power3.easeOut}),0);
         }
         
     }
@@ -409,7 +412,402 @@ function FillCircle(){
     }
     _this.init();
 }
+function RandomPolyline(){
+    var _this = this,
+    pane,container,mask;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var direction = Math.floor(Math.random()*4),
+            num = Math.floor(Math.random()*2 + 2),
+            points = _this.generatePoints(direction,num),
+            lineWidth = Math.random()*4 + 2,
+            color = colorSet[Math.floor(Math.random()*colorSet.length)],
+            polyline = new PIXI.Graphics(),
+            time = 0,delta = 0.5,
+            mask = new PIXI.Graphics(),
+            arr = [[0,0,window.innerWidth,0,window.innerWidth,0,0,0],
+            [window.innerWidth,0,window.innerWidth,0,window.innerWidth,window.innerHeight,window.innerWidth,window.innerHeight],
+            [0,window.innerHeight,window.innerWidth,window.innerHeight,window.innerWidth,window.innerHeight,0,window.innerHeight],
+            [0,0,0,0,0,window.innerHeight,0,window.innerHeight]];
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(polyline)},
+                onUpdate:_this.update,
+                onUpdateParams:[mask]
+            }),
+            target = direction % 2 === 0? {y:direction ===0? window.innerHeight:0,ease:Power3.easeOut}:
+                {x:direction===1? 0:window.innerWidth,ease:Power3.easeOut},
+            startPoint = (direction+2)%4;
+            mask.beginFill(0,0);
+            mask.points = [];
+            for(var index=0;index<4;index++)
+                mask.points.push({x:arr[direction][index*2],y:arr[direction][index*2+1]});
+            polyline.points = points;
+            _this.drawLine(polyline,lineWidth,color)
+            polyline.mask = mask;
+            _this.pane.addChild(polyline);
+            tl.add(TweenMax.to(mask.points[startPoint],0.7,target),0);
+            tl.add(TweenMax.to(mask.points[(startPoint+1)%4],0.7,target),0);
+            tl.add(TweenMax.to(mask.points[(startPoint+2)%4],0.7,target),0.7);
+            tl.add(TweenMax.to(mask.points[(startPoint+3)%4],0.7,target),0.7);
+    }
+    _this.update = function(mask){
+        mask.clear();
+        mask.beginFill(0,0);
+        var points = mask.points;
+        mask.moveTo(points[0].x,points[0].y);
+        for(var index=1;index<points.length;index++)
+        mask.lineTo(points[index].x,points[index].y);
+        mask.endFill();
+    }
+    _this.drawLine = function(polyline,width,color){
+        polyline.clear();
+        polyline.lineStyle(width,color);
+        var points = polyline.points;
+        polyline.moveTo(points[0].x,points[0].y);
+        for(var index=1;index<points.length;index++)
+            polyline.lineTo(points[index].x,points[index].y);
+        polyline.endFill();
+    }
+    _this.generatePoints = function(direction,num){
+        var points = [];
+        if(direction % 2 ===0){
+            var minX = 0,
+                maxX = window.innerWidth,
+                delta = window.innerHeight / num;
+            points.push({x:random(minX,maxX),y:0})
+            for(var i=0;i<num;i++){
+                var x = random(minX,maxX),
+                    y = random(i*delta,(i+1)*delta);
+                points.push({x:x,y:y});
+            }
+            points.push({x:random(minX,maxX),y:window.innerHeight})
+            if(direction===2)
+                points = points.sort(function(a,b){return b.y-a.y;})
+        }else{
+            var minY = 0,
+                maxY = window.innerHeight,
+                delta = window.innerWidth / num;
+            points.push({x:0,y:random(minY,maxY)})
+            for(var i=0;i<num;i++){
+                var y = random(minY,maxY),
+                    x = random(i*delta,(i+1)*delta);
+                points.push({x:x,y:y});
+            }
+            points.push({x:window.innerWidth,y:random(minY,maxY)});
+            if(direction===1)
+                points = points.sort(function(a,b){return b.x - a.x;})
+        }
+        return points;
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function RotationRect(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var num = Math.floor(Math.random() * 6 +6),
+            radius = random(window.innerHeight/6,window.innerHeight/2),
+            width = random(10,40),
+            color = colorSet[Math.floor(Math.random()*colorSet.length)],
+            rects = [],time = 0,delta = 0.15,
+            positionDelta = Math.PI * 2 / num,
+            selfRotation = random(0,Math.PI),
+            rotation = random(Math.PI/5,Math.PI*2/3),
+            container = new PIXI.Graphics(),
+            backRotation = random(Math.PI,Math.PI * 3),
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(container)}
+            });
+            container.beginFill(0,0);
+            container.drawRect(0,0,window.innerWidth,window.innerHeight);
+            container.pivot.x = window.innerWidth / 2;
+            container.pivot.y = window.innerHeight / 2;
+            container.position = {x:window.innerWidth /2,y:window.innerHeight /2 };
+            _this.pane.addChild(container);
+        for(var index = 0;index<num;index++){
+            var rect = new PIXI.Graphics(),
+                x = Math.sin(positionDelta * index) * radius + window.innerWidth/2,
+                y = Math.cos(positionDelta * index) * radius + window.innerHeight/2;
+            _this.drawRect(rect,color,0,x,y);
+            container.addChild(rect);
+            rects.push(rect);
+            tl.add(TweenMax.to(rect,delta,{width:width,rotation:selfRotation,onUpdate:_this.drawRect,onUpdateParams:[rect,color,width,x,y]}),time);
+            time += delta / 3;
+        }
+        tl.add(TweenMax.to(container,0.8,{rotation:rotation,ease:Bounce.easeOut}))
+        time = 0.8 + (num-1)*delta/3 + delta;
+        for(var rect of rects){
+            tl.add(TweenMax.to(rect,delta,{width:0,rotation:backRotation}),time);
+            time += delta /3;
+        }
+    }
+    _this.drawRect = function(rect,color,width,x,y){
+        rect.clear();
+        rect.beginFill(color);
+        rect.drawRect(0,0,width,width);
+        rect.position = {x:x,y:y};
+        rect.pivot.x = rect.pivot.y = width/2;
+        rect.endFill();
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function CircleCircle(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var num = Math.floor(Math.random() * 6 +6),
+            radius = random(window.innerHeight/6,window.innerHeight/2),
+            width = random(10,30),
+            color = colorSet[Math.floor(Math.random()*colorSet.length)],
+            circles = [],time = 0,delta = 0.6,
+            container = new PIXI.Graphics(),
+            positionDelta = Math.PI * 2 / num,
+            time = 0, delta = 0.15,
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(container)}
+            });
+            container.beginFill(0,0);
+            container.drawRect(0,0,window.innerWidth,window.innerHeight);
+            _this.pane.addChild(container);
+        for(var index = 0;index<num;index++){
+            var circle = new PIXI.Graphics(),
+                x = Math.sin(positionDelta * index) * radius + window.innerWidth/2,
+                y = Math.cos(positionDelta * index) * radius + window.innerHeight/2;
+            circle._radius = 0;
+            circle.pX = x;
+            circle.pY = y;
+            _this.drawCircle(circle,color);
+            container.addChild(circle);
+            circles.push(circle);
+            tl.add(TweenMax.to(circle,delta,{_radius:width,onUpdate:_this.drawCircle,onUpdateParams:[circle,color],ease:Bounce.easeOut}),time);
+            time += delta / 3;
+        }
+        time = (num-1)*delta/3 + delta;
+        for(var circle of circles){
+            var newX = random(0,container.width),
+                newY = random(0,container.height);
+            tl.add(TweenMax.to(circle,0.3,{_radius:0,pX:newX,pY:newY,onUpdate:_this.drawCircle,onUpdateParams:[circle,color]}),time);
+            time += 0.3 / 3;
+        }
 
+    }
+    _this.drawCircle = function(circle,color){
+        circle.clear();
+        circle.beginFill(color);
+        circle.drawCircle(0,0,circle._radius);
+        circle.position = {x:circle.pX,y:circle.pY};
+        circle.endFill();
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function RandomCircle(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var num = Math.floor(Math.random() * 5 +5),
+            circles = [],time = 0,delta = 0.6,
+            container = new PIXI.Graphics(),
+            time = 0, delta = 0.3,
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(container)}
+            });
+            container.beginFill(0,0);
+            container.drawRect(0,0,window.innerWidth,window.innerHeight);
+            _this.pane.addChild(container);
+        for(var index = 0;index<num;index++){
+            var circle = new PIXI.Graphics(),
+                radius = random(15,45),
+                color = colorSet[Math.floor(Math.random()*colorSet.length)],
+                x = random(0,window.innerWidth),
+                y = random(0,window.innerHeight);
+            circle._radius = 0;
+            circle.pX = x;
+            circle.pY = y;
+            _this.drawCircle(circle,color);
+            container.addChild(circle);
+            circles.push(circle);
+            tl.add(TweenMax.to(circle,delta,{_radius:radius,onUpdate:_this.drawCircle,onUpdateParams:[circle,color],ease:Bounce.easeOut}),time);
+            time += delta /3;
+        }
+        time = (num-1)*delta/3 + delta + 0.2;
+        for(var circle of circles){
+            tl.add(TweenMax.to(circle,delta,{_radius:0,onUpdate:_this.drawCircle,onUpdateParams:[circle,color],ease:Bounce.easeOut}),time);
+            time += delta / 3;
+        }
+
+    }
+    _this.drawCircle = function(circle,color){
+        circle.clear();
+        circle.beginFill(color);
+        circle.drawCircle(0,0,circle._radius);
+        circle.position = {x:circle.pX,y:circle.pY};
+        circle.endFill();
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function RandomRectangle(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var num = Math.floor(Math.random() * 5 +5),
+            rects = [],time = 0,delta = 0.6,
+            container = new PIXI.Graphics(),
+            time = 0, delta = 0.3,
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(container)}
+            });
+            container.beginFill(0,0);
+            container.drawRect(0,0,window.innerWidth,window.innerHeight);
+            _this.pane.addChild(container);
+        for(var index = 0;index<num;index++){
+            var rect = new PIXI.Graphics(),
+                width = random(30,80),
+                color = colorSet[Math.floor(Math.random()*colorSet.length)],
+                x = random(0,window.innerWidth),
+                y = random(0,window.innerHeight),
+                newX = (random(0,1)>0.5? -1:1)* 100+x,
+                newY = (random(0,1)>0.5? -1:1)* 100+y;
+            rect._width = 0;
+            rect.pX = x;
+            rect.pY = y;
+            rect.color = color;
+            rect.lastX = (random(0,1)>0.5? -1:1)* 100+newX;
+            rect.lastY = (random(0,1)>0.5? -1:1)* 100+newY;
+            _this.drawRect(rect,color);
+            container.addChild(rect);
+            rects.push(rect);
+            tl.add(TweenMax.to(rect,delta,{_width:width,pX:newX,pY:newY,rotation:Math.PI,onUpdate:_this.drawRect,onUpdateParams:[rect],ease:Power2.easeOut}),time)
+            
+            time += delta /3;
+        }
+        time = (num-1)*delta/3 + delta + 0.2;
+        for(var rect of rects){
+            tl.add(TweenMax.to(rect,delta,{_width:0,pX:rect.lastX,pY:rect.lastY,rotation:0,onUpdate:_this.drawRect,onUpdateParams:[rect],ease:Power2.easeIn}),time);
+            time += delta / 3;
+        }
+
+    }
+    _this.drawRect = function(rect){
+        rect.clear();
+        rect.lineStyle(4,rect.color);
+        rect.drawRect(0,0,rect._width,rect._width);
+        rect.position = {x:rect.pX,y:rect.pY};
+        rect.pivot.x = rect.pivot.y = rect._width/2;
+        rect.endFill();
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function RotationPolygon(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
+function ZoomOutPolygon(){
+    var _this = this,
+    pane,container;
+    _this.init = function(){
+        _this.container = new PIXI.Container();
+        _this.pane = new PIXI.Graphics();
+        _this.pane.beginFill(0,0);
+        _this.pane.drawRect(0,0,window.innerWidth,window.innerHeight);
+        _this.container.addChild(_this.pane);
+    }
+    _this.play = function(){
+        var num = Math.floor(random(3,10)),
+            radius = 100,
+            points = _this.generatePolygonPoints(radius,num),
+            lineWidth = 2,
+            color = colorSet[Math.floor(Math.random()*colorSet.length)],
+            polygon = new PIXI.Graphics(),
+            tl = new TimelineMax({
+                onComplete:function(){_this.pane.removeChild(polygon)}
+            });
+        polygon.lineStyle(lineWidth,color)
+            .drawPolygon(points)
+            .closePath();
+        polygon.position = {x:window.innerWidth/2,y:window.innerHeight/2}
+        polygon.pivot.x = window.innerWidth /2;
+        polygon.pivot.y = window.innerHeight /2;
+        _this.pane.addChild(polygon);
+        tl.to(polygon.scale,0.8,{x:15,y:15,rotation:Math.PI/3,ease:Power2.easeOut});
+    }
+    _this.generatePolygonPoints = function(radius,num){
+        var deltaRad = Math.PI * 2 / num,
+            points = [];
+        for(var index = 0;index<num;index++){
+            var x = Math.sin(index*deltaRad) * radius + window.innerWidth / 2,
+                y = Math.cos(index*deltaRad) * radius + window.innerHeight / 2;
+            points.push(new PIXI.Point(x,y));
+        }
+        return points;
+    }
+    _this.getContainer = function(){
+        return _this.container;
+    }
+    _this.init();
+}
 function random(min,max){
     return Math.random()*(max-min) + (min);
 }
